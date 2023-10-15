@@ -1,10 +1,11 @@
 import random
 
-p=0x1A0111EA397FE69A4B1BA7B6434BACD764774B84F38512BF6730D2A0F6B0F6241EABFFFEB153FFFFB9FEFFFFFFFFAAAB
+fieldPrime=0x1A0111EA397FE69A4B1BA7B6434BACD764774B84F38512BF6730D2A0F6B0F6241EABFFFEB153FFFFB9FEFFFFFFFFAAAB
+groupOrder=0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 
 class Fq1():
   def __init__(self,x):
-    self.x=x%p
+    self.x=x%fieldPrime
   def __add__(self,b):
     return Fq1(self.x+b.x)
   def __sub__(self,b):
@@ -13,7 +14,7 @@ class Fq1():
     return Fq1(self.x*b.x)
   def inv(self):
     t,newt=0,1
-    r,newr=p,self.x
+    r,newr=fieldPrime,self.x
     while newr!=0:
       quotient=r//newr
       t,newt=newt,t-quotient*newt
@@ -21,14 +22,17 @@ class Fq1():
     if r>1:
       raise Exception("not invertible")
     if t<0:
-      t+=p
+      t+=fieldPrime
     return Fq1(t)
   def mul_nonres(self):
     return self
   def __str__(self):
-    return str(self.x)
+    return hex(self.x)
   def __eq__(self,b):
     return self.x==b.x
+  @staticmethod
+  def fromInt(x):
+    return Fq1(x)
 
 class Fq2():
   def __init__(self,x,y):
@@ -49,6 +53,9 @@ class Fq2():
     return '%s,%s'%(str(self.x),str(self.y))
   def __eq__(self,b):
     return (self.x,self.y)==(b.x,b.y)
+  @staticmethod
+  def fromInt(x):
+    return Fq2(Fq1.fromInt(x),Fq1.fromInt(0))
 
 class Fq6():
   def __init__(self,x,y,z):
@@ -76,6 +83,11 @@ class Fq6():
     return Fq6(self.z.mul_nonres(), self.x, self.y)
   def __str__(self):
     return '%s,%s,%s'%(str(self.x),str(self.y),str(self.z))
+  def __eq__(self,b):
+    return (self.x,self.y,self.z)==(b.x,b.y,b.z)
+  @staticmethod
+  def fromInt(x):
+    return Fq6(Fq2.fromInt(x),Fq2.fromInt(0),Fq2.fromInt(0))
 
 class Fq12():
   def __init__(self,x,y):
@@ -87,12 +99,27 @@ class Fq12():
     return Fq12(self.x-b.x,self.y-b.y)
   def __mul__(self,b):
     return Fq12(self.x*b.x + (self.y*b.y).mul_nonres(), self.y*b.x + self.x*b.y)
+  def __pow__(self,k):
+    res = self
+    temp = self
+    k-=1
+    while k>0:
+      if k&1:
+        res*=temp
+      temp*=temp
+      k>>=1
+    return res
   def inv(self):
     factor=(self.x*self.x - (self.y*self.y).mul_nonres()).inv()
     zero=Fq6(Fq2(Fq1(0),Fq1(0)),Fq2(Fq1(0),Fq1(0)),Fq2(Fq1(0),Fq1(0)))
     return Fq12(self.x*factor, (zero-self.y)*factor)
   def __str__(self):
     return '%s,%s'%(str(self.x),str(self.y))
+  def __eq__(self,b):
+    return (self.x,self.y)==(b.x,b.y)
+  @staticmethod
+  def fromInt(x):
+    return Fq12(Fq6.fromInt(x),Fq6.fromInt(0))
 
 class Point():
   def __init__(self,x,y):
@@ -123,16 +150,16 @@ class Point():
     t=Fq1(4)
     if isinstance(self.x,Fq2):
       t=Fq2(Fq1(4),Fq1(4))
-    return self.y*self.y == self.x*self.x*self.x + t #Fq1(4)
+    return self.y*self.y == self.x*self.x*self.x + t
   def __str__(self):
     return '(%s),(%s)'%(str(self.x),str(self.y))
+  def __eq__(self,b):
+    return (self.x,self.y)==(b.x,b.y)
   def untwist(self):
     assert isinstance(self.x,Fq2)
-    Fq20 = Fq2(Fq1(0),Fq1(0))
-    Fq60 = Fq6(Fq20, Fq20, Fq20)
-    root=Fq6(Fq20, Fq2(Fq1(1),Fq1(0)), Fq20)
-    return Point(Fq12(Fq6(self.x, Fq20, Fq20), Fq60) * Fq12(root, Fq60).inv(),
-                 Fq12(Fq6(self.y, Fq20, Fq20), Fq60) * Fq12(Fq60, root).inv())
+    root=Fq6(Fq2.fromInt(0), Fq2.fromInt(1), Fq2.fromInt(0))
+    return Point(Fq12(Fq6(self.x, Fq2.fromInt(0), Fq2.fromInt(0)), Fq6.fromInt(0)) * Fq12(root, Fq6.fromInt(0)).inv(),
+                 Fq12(Fq6(self.y, Fq2.fromInt(0), Fq2.fromInt(0)), Fq6.fromInt(0)) * Fq12(Fq6.fromInt(0), root).inv())
     
 
 
@@ -143,7 +170,36 @@ g2Gen = Point(Fq2(Fq1(0x024AA2B2F08F0A91260805272DC51051C6E47AD4FA403B02B4510B64
               Fq2(Fq1(0x0CE5D527727D6E118CC9CDC6DA2E351AADFD9BAA8CBDD3A76D429A695160D12C923AC9CC3BACA289E193548608B82801),
                   Fq1(0x0606C4A02EA734CC32ACD2B02BC28B99CB3E287E85A763AF267492AB572E99AB3F370D275CEC1DA1AAA9075FF05F79BE)))
 
+def doubleEval(r, p):
+  wideR = r.untwist()
+  slope = (wideR.x * wideR.x + wideR.x * wideR.x + wideR.x * wideR.x) * (wideR.y + wideR.y).inv()
+  v = wideR.y - slope * wideR.x
+  return Fq12.fromInt(p.y.x) - (Fq12.fromInt(p.x.x) * slope) - v
 
-print(g2Gen*125)
-print((g2Gen*125).untwist())
+def addEval(r, q, p):
+  wideR = r.untwist()
+  wideQ = q.untwist()
+  if wideR.x == wideQ.x and wideR.y == Fq12.fromInt(0)-wideQ.y:
+    return Fq12.fromInt(p.x.x) - wideR.x
+  slope = (wideQ.y - wideR.y) * (wideQ.x - wideR.x).inv()
+  v = (wideQ.y * wideR.x - wideR.y * wideQ.x) * (wideR.x - wideQ.x).inv()
+  return Fq12.fromInt(p.y.x) - (Fq12.fromInt(p.x.x) * slope) - v
+
+def millerLoop(p, q):
+  l=[c=='1' for c in bin(0xd201000000010000)[2:]]
+  r = q
+  result = Fq12.fromInt(1)
+  for t in l:
+    result *= result * doubleEval(r, p)
+    r += r
+    if t:
+      r += q
+      result *= addEval(r+r, q, p)
+  return result
+
+def pairing(p, q):
+  return millerLoop(p, q) ** ((fieldPrime**12 - 1) // groupOrder)
+
+print(pairing(g1Gen*5, g2Gen*5))
+print(pairing(g1Gen*5, g2Gen*3) + pairing(g1Gen*5, g2Gen*2))
 
