@@ -20,7 +20,7 @@ def prover_open(srs, r, f, u):
   f[0] -= fields.Fq1(v)
   g = [fields.Fq1(0) for _ in range(len(f)-2)] + [fields.Fq1(-u), fields.Fq1(1)]
   q, rem = poly.div(f, g)
-  assert len(rem)==1 and rem[0].x == 0
+  assert len(rem)==0 or (len(rem)==1 and rem[0].x == 0)
   pi = srs[-4] * s
   for i in range(len(q)):
     pi += srs[i]*q[i].x

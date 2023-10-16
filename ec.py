@@ -17,6 +17,8 @@ class Point():
     x=slope*slope - self.x - b.x
     return Point(x, slope * (self.x - x) - self.y)
   def __neg__(self):
+    if self.x is None:
+      return self
     return Point(self.x, -self.y)
   def __sub__(self, b):
     return self + (-b)
