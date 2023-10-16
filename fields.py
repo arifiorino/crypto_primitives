@@ -9,6 +9,8 @@ class Fq1():
     return Fq1(self.x-b.x)
   def __mul__(self,b):
     return Fq1(self.x*b.x)
+  def __neg__(self):
+    return Fq1.fromInt(0)-self
   def inv(self):
     t,newt=0,1
     r,newr=fieldPrime,self.x
@@ -41,6 +43,8 @@ class Fq2():
     return Fq2(self.x-b.x,self.y-b.y)
   def __mul__(self,b):
     return Fq2(self.x*b.x - self.y*b.y, self.x*b.y + self.y*b.x)
+  def __neg__(self):
+    return Fq2.fromInt(0)-self
   def inv(self):
     factor=(self.x*self.x + self.y*self.y).inv()
     return Fq2(self.x*factor,(Fq1(0)-self.y)*factor)
@@ -70,6 +74,8 @@ class Fq6():
     t3=(self.y*b.z + self.z*b.y).mul_nonres()
     t4=(self.z*b.z).mul_nonres()
     return Fq6(t0+t3, t1+t4, t2)
+  def __neg__(self):
+    return Fq6.fromInt(0)-self
   def inv(self):
     t0 = self.x*self.x - (self.y*self.z).mul_nonres()
     t1 = (self.z*self.z).mul_nonres() - self.x*self.y
@@ -96,6 +102,8 @@ class Fq12():
     return Fq12(self.x-b.x,self.y-b.y)
   def __mul__(self,b):
     return Fq12(self.x*b.x + (self.y*b.y).mul_nonres(), self.y*b.x + self.x*b.y)
+  def __neg__(self):
+    return Fq12.fromInt(0)-self
   def __pow__(self,k):
     res = Fq12.fromInt(1)
     temp = self

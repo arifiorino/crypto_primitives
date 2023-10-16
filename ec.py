@@ -16,6 +16,10 @@ class Point():
       slope = (b.y-self.y) * (b.x-self.x).inv() #line
     x=slope*slope - self.x - b.x
     return Point(x, slope * (self.x - x) - self.y)
+  def __neg__(self):
+    return Point(self.x, -self.y)
+  def __sub__(self, b):
+    return self + (-b)
   def __mul__(self,k):
     res = Point(None,None)
     temp = self

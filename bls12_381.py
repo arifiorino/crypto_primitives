@@ -42,6 +42,5 @@ def millerLoop(p, q):
 def pairing(p, q):
   return millerLoop(p, q) ** ((fields.fieldPrime**12 - 1) // groupOrder)
 
-
-print(pairing(G1*5, G2*5))
-print(pairing(G1*5, G2*3) * pairing(G1*5, G2*2))
+def test():
+  assert pairing(G1*6,G2) == pairing(G1*3,G2*2)
