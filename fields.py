@@ -97,9 +97,8 @@ class Fq12():
   def __mul__(self,b):
     return Fq12(self.x*b.x + (self.y*b.y).mul_nonres(), self.y*b.x + self.x*b.y)
   def __pow__(self,k):
-    res = self
+    res = Fq12.fromInt(1)
     temp = self
-    k-=1
     while k>0:
       if k&1:
         res*=temp
@@ -108,7 +107,7 @@ class Fq12():
     return res
   def inv(self):
     factor=(self.x*self.x - (self.y*self.y).mul_nonres()).inv()
-    zero=Fq6(Fq2(Fq1(0),Fq1(0)),Fq2(Fq1(0),Fq1(0)),Fq2(Fq1(0),Fq1(0)))
+    zero=Fq6.fromInt(0)
     return Fq12(self.x*factor, (zero-self.y)*factor)
   def __str__(self):
     return '%s,%s'%(str(self.x),str(self.y))
@@ -117,3 +116,9 @@ class Fq12():
   @staticmethod
   def fromInt(x):
     return Fq12(Fq6.fromInt(x),Fq6.fromInt(0))
+
+Fq1Rand=lambda: Fq1(random.randint(0,fieldPrime))
+Fq2Rand=lambda:Fq2(Fq1Rand(),Fq1Rand())
+Fq6Rand=lambda:Fq6(Fq2Rand(),Fq2Rand(),Fq2Rand())
+Fq12Rand=lambda:Fq12(Fq6Rand(),Fq6Rand())
+
