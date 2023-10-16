@@ -1,4 +1,4 @@
-import fields, ec
+import fields, ec, util, random
 
 fields.fieldPrime=0x1A0111EA397FE69A4B1BA7B6434BACD764774B84F38512BF6730D2A0F6B0F6241EABFFFEB153FFFFB9FEFFFFFFFFAAAB
 groupOrder=0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
@@ -40,7 +40,13 @@ def millerLoop(p, q):
   return result
 
 def pairing(p, q):
+  assert not (p.x is None or q.x is None)
+  assert p.check() and q.check() and p * groupOrder == ec.Point(None,None) and q * groupOrder == ec.Point(None,None)
   return millerLoop(p, q) ** ((fields.fieldPrime**12 - 1) // groupOrder)
 
 def test():
-  assert pairing(G1*6,G2) == pairing(G1*3,G2*2)
+  a,b,c = random.randint(0,groupOrder-1),random.randint(0,groupOrder-1),random.randint(0,groupOrder-1)
+  d = a*b*util.mult_inv(c,groupOrder)
+  assert c*d % groupOrder  == a*b % groupOrder
+  assert pairing(G1*a,G2*b) == pairing(G1*c,G2*d)
+

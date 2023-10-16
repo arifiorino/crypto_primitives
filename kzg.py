@@ -3,8 +3,10 @@ import bls12_381, fields, ec, random, poly
 def setup(Nmax):
   tau = random.randint(0,bls12_381.groupOrder-1)
   xi = random.randint(0,bls12_381.groupOrder-1)
-  return [bls12_381.G1*x for x in [tau**i for i in range(Nmax)]+[xi]] +\
-         [bls12_381.G2*x for x in [1,tau,xi]]
+  srs=[bls12_381.G1]
+  for i in range(Nmax-1):
+    srs.append(srs[-1] * tau)
+  return srs + [bls12_381.G1*xi] + [bls12_381.G2*x for x in [1,tau,xi]]
 
 def commit(srs, f):
   r = random.randint(0,bls12_381.groupOrder-1)
@@ -14,16 +16,15 @@ def commit(srs, f):
   return C, r
 
 def prover_open(srs, r, f, u):
-  v = poly.eval(f, u)
+  v = poly.eval(f, u, bls12_381.groupOrder)
   s = random.randint(0,bls12_381.groupOrder-1)
-  f = [fields.Fq1(c) for c in f]
-  f[0] -= fields.Fq1(v)
-  g = [fields.Fq1(0) for _ in range(len(f)-2)] + [fields.Fq1(-u), fields.Fq1(1)]
-  q, rem = poly.div(f, g)
-  assert len(rem)==0 or (len(rem)==1 and rem[0].x == 0)
+  f[0] = (f[0]-v) % bls12_381.groupOrder
+  g = [0 for _ in range(len(f)-2)] + [-u % bls12_381.groupOrder, 1]
+  q, rem = poly.div(f, g, bls12_381.groupOrder)
+  assert len(rem)==0 or (len(rem)==1 and rem[0] == 0)
   pi = srs[-4] * s
   for i in range(len(q)):
-    pi += srs[i]*q[i].x
+    pi += srs[i]*q[i]
   delta = srs[0]*r - srs[1]*s + srs[0]*(s*u)
   return (v, pi, delta)
 
@@ -33,10 +34,11 @@ def verify_open(srs, C, r, pi, delta, u, v):
   return lhs==rhs
 
 def test():
-  f = [1,2,3,4,5,6,7]
+  #random polynomial of degree 100:
+  f = [random.randint(0,bls12_381.groupOrder-1) for _ in range(100)]
   srs=setup(len(f))
   C, r = commit(srs,f)
-  u = 567 
+  u = random.randint(0,bls12_381.groupOrder-1)
   v, pi, delta = prover_open(srs, r, f, u)
   assert(verify_open(srs, C, r, pi, delta, u, v))
 

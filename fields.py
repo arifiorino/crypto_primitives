@@ -1,4 +1,4 @@
-import random
+import random, util
 
 class Fq1():
   def __init__(self,x):
@@ -12,17 +12,7 @@ class Fq1():
   def __neg__(self):
     return Fq1.fromInt(0)-self
   def inv(self):
-    t,newt=0,1
-    r,newr=fieldPrime,self.x
-    while newr!=0:
-      quotient=r//newr
-      t,newt=newt,t-quotient*newt
-      r,newr=newr,r-quotient*newr
-    if r>1:
-      raise Exception("not invertible")
-    if t<0:
-      t+=fieldPrime
-    return Fq1(t)
+    return Fq1(util.mult_inv(self.x,fieldPrime))
   def mul_nonres(self):
     return self
   def __str__(self):
