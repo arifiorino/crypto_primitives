@@ -19,7 +19,7 @@ def prover_open(srs, r, f, u):
   v = poly.eval(f, u, bls12_381.groupOrder)
   s = random.randint(0,bls12_381.groupOrder-1)
   f[0] = (f[0]-v) % bls12_381.groupOrder
-  g = [0 for _ in range(len(f)-2)] + [-u % bls12_381.groupOrder, 1]
+  g = [-u % bls12_381.groupOrder, 1]
   q, rem = poly.div(f, g, bls12_381.groupOrder)
   assert len(rem)==0 or (len(rem)==1 and rem[0] == 0)
   pi = srs[-4] * s

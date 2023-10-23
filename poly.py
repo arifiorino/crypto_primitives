@@ -1,5 +1,7 @@
 import util
 
+#All polynomials are increasing
+
 def eval(f, x, p):
   s,curr=0,1
   for c in f:
@@ -10,12 +12,8 @@ def eval(f, x, p):
 def div(num, den, p):
   quot = []
   divisor = den[-1]
-  shiftlen=0
-  for x in den:
-    if x==0:
-      shiftlen+=1
-    else:
-      break
+  shiftlen=len(num)-len(den)
+  den=[0]*shiftlen+den
   for i in range(shiftlen + 1):
     mult = num[-1] * util.mult_inv(divisor,p)
     quot = [mult] + quot
@@ -51,5 +49,10 @@ def lagrange(ys, p):
   return L
 
 
+def range_poly(n,p):
+  a=[1]
+  for i in range(n):
+    a=mult(a,[-i,1],p)
+  return a
 
 
