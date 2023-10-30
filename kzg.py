@@ -34,8 +34,8 @@ def verify_open(srs, C, r, pi, delta, u, v):
   return lhs==rhs
 
 def test():
-  #random polynomial of degree 100:
-  f = [random.randint(0,bls12_381.groupOrder-1) for _ in range(100)]
+  #random polynomial of degree 128:
+  f = [random.randint(0,bls12_381.groupOrder-1) for _ in range(128)]
   srs=setup(len(f))
   C, r = commit(srs,f)
   u = random.randint(0,bls12_381.groupOrder-1)

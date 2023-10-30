@@ -27,32 +27,14 @@ def div(num, den, p):
   return quot, num
 
 def mult(a, b, p):
-  res = [0]*(len(a)+len(b)-1)
-  for ai,ac in enumerate(a):
-    for bi,bc in enumerate(b):
-      res[ai+bi] += ac*bc
-  res = [x%p for x in res]
-  return res
-
-def lagrange(ys, p):
-  k = len(ys)-1
-  ls = []
-  for j in range(k+1):
-    ls.append([1])
-    for m in range(k+1):
-      if m!=j:
-        x=util.mult_inv((j-m)%p, p)
-        ls[-1] = mult(ls[-1], [-m * x, x], p)
-  L = [0 for _ in range(k+1)]
-  for j in range(k+1):
-    L = [(prev+ys[j]*l)%p for prev,l in zip(L,ls[j])]
-  return L
-
-
-def range_poly(n,p):
-  a=[1]
-  for i in range(n):
-    a=mult(a,[-i,1],p)
-  return a
+  n=max(len(a),len(b))*2
+  alpha=util.nth_root(n,p)
+  a+=[0]*(n-len(a))
+  b+=[0]*(n-len(b))
+  a=util.dft(a,alpha,p)
+  b=util.dft(b,alpha,p)
+  c=[x*y for x,y in zip(a,b)]
+  c=util.inv_dft(c,alpha,p)
+  return c
 
 
