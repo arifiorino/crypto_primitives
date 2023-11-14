@@ -71,5 +71,3 @@ def test_toeplitz_mult():
   print(matmul(T,x))
   print(toeplitz_mult(a,x,alpha,p))
 
-test_circulant_mult()
-test_toeplitz_mult()

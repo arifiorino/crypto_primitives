@@ -26,6 +26,15 @@ def div(num, den, p):
   num = [x%p for x in num]
   return quot, num
 
+def synth_div(f,g,p):
+  f2=f[::-1]
+  r=f2[0]
+  res=[r]
+  for i in range(len(f)-1):
+    r=(r*g)+f2[i+1]
+    res.append(r%p)
+  return (res[:-1][::-1],res[-1])
+
 def mult(a, b, p):
   n=max(len(a),len(b))*2
   alpha=util.nth_root(n,p)

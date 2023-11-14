@@ -21,13 +21,17 @@ x=69
 Ti=list(range(1,17))
 T=util.inv_dft(Ti,alpha,p)
 setup=[pow(x,i,p) for i in range(16)]
-h = util.toeplitz_mult(T+[0]*15,setup[::-1],alpha2,p)
+h = util.toeplitz_mult(T[1:]+[0]*16,setup[::-1],alpha2,p)
+#print(poly.eval(T,x,p))
+#print(poly.eval(T[1:],x,p))
+#print(T[-1])
 print(util.dft(h,alpha,p))
 
-print([(poly.eval(T,x,p)-Ti[i])*util.mult_inv((x-pow(alpha,i,p))%p,p)%p for i in range(16)])
+#print([(poly.eval(T,x,p)-Ti[i])*util.mult_inv((x-pow(alpha,i,p))%p,p)%p for i in range(16)])
 
-Kis = [poly.div([T[0]-Ti[i]]+T[1:], [p-pow(alpha,i,p), 1], p)[0] for i in range(16)]
+Kis = [poly.div([T[0]-Ti[i]]+T[1:],[p-pow(alpha,i,p),1],p)[0] for i in range(16)]
 print([poly.eval(Ki,x,p) for Ki in Kis])
+
 
 
 
