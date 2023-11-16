@@ -24,43 +24,35 @@ def nth_root(n, p):
 
 # x is coefficients of f
 # eval f(alpha^k)
-def dft(x, alpha, p):
-  n=len(x)
-  assert n & (n-1) == 0
-  return [sum(x[j]*pow(alpha,j*k,p) % p for j in range(n))%p for k in range(n)]
-def fft(y, alpha, prime):
-  def fft2(x,N,s):
+def dft(y, alpha, prime):
+  def dft2(x,N,s):
     if N==1:
       return [x[0]]
     else:
-      X= fft2(x, N//2, s*2) + fft2(x[s:], N//2, s*2)
+      X= dft2(x, N//2, s*2) + dft2(x[s:], N//2, s*2)
       for k in range(N//2):
         p=X[k]
         q=pow(alpha,s*k,prime) * X[k+N//2]
         X[k]=(p+q)%prime
         X[k+N//2]=(p-q)%prime
     return X
-  return fft2(y,len(y),1)
+  return dft2(y,len(y),1)
 
 # x is eval f(alpha^k)
 # return coefficients of f
-def inv_dft(x, alpha, p):
-  n=len(x)
-  assert n & (n-1) == 0
-  return [mult_inv(n,p) * sum(x[j]*mult_inv(pow(alpha,j*k,p),p) % p for j in range(n))%p for k in range(n)]
-def inv_fft(y, alpha, prime):
-  def inv_fft2(x,N,s):
+def inv_dft(y, alpha, prime):
+  def inv_dft2(x,N,s):
     if N==1:
       return [N*x[0]]
     else:
-      X= inv_fft2(x, N//2, s*2) + inv_fft2(x[s:], N//2, s*2)
+      X= inv_dft2(x, N//2, s*2) + inv_dft2(x[s:], N//2, s*2)
       for k in range(N//2):
         p=X[k]
         q=mult_inv(pow(alpha,s*k,prime),prime) * X[k+N//2]
         X[k]=(p+q)%prime
         X[k+N//2]=(p-q)%prime
     return X
-  return [mult_inv(len(y),prime) * c % prime for c in inv_fft2(y,len(y),1)]
+  return [mult_inv(len(y),prime) * c % prime for c in inv_dft2(y,len(y),1)]
 
 matmul=lambda A,x: [sum([x1*x2 for x1,x2 in zip(A[i],x)]) for i in range(len(A))]
 
