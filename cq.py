@@ -30,15 +30,15 @@ f_x_1 = sum((srs[i] * f[i] for i in range(n)), start=ec.Point(None,None)) #commi
 # IsInTable(f_x_1, table, srs; f):
 # Round 1
 m_i = [(i,1) for i in range(n)] #1
-m_x_1 = sum((L_i_x_1[i] * coeff for i,coeff in m_i), start=ec.Point(None,None)) #2
+m_x_1 = sum((L_i_x_1[i] * y for i,y in m_i), start=ec.Point(None,None)) #2
 # Round 2
 beta = random.randint(0,p-1) #1
-A_i = [(i,coeff * util.mult_inv(table[i]+beta,p)) for i,coeff in m_i] #2
-A_x_1 = sum((L_i_x_1[i] * coeff for i,coeff in A_i), start=ec.Point(None,None)) #3
-Q_A_x_1 = sum((Q_i_x_1[i] * coeff for i,coeff in A_i), start=ec.Point(None,None)) #4
+A_i = [(i,y * util.mult_inv(table[i]+beta,p)) for i,y in m_i] #2
+A_x_1 = sum((L_i_x_1[i] * y for i,y in A_i), start=ec.Point(None,None)) #3
+Q_A_x_1 = sum((Q_i_x_1[i] * y for i,y in A_i), start=ec.Point(None,None)) #4
 B_i = [util.mult_inv(f_i[i]+beta,p) for i in range(n)] #5
 B = util.inv_dft(B_i, alpha_n, p) #5
-B_0 = B[1:] #6
+B_0 = B[1:]+[0] #6
 B_0_x_1 = bls12_381.G1*poly.eval(B_0,x,p) #7
 Q_B = poly.mult(B, [(f[0]+beta)%p]+f[1:], p) #8
 Q_B = poly.div([(Q_B[0]-1)%p]+Q_B[1:], [p-1]+[0]*(n-1)+[1], p)[0] #8
@@ -46,4 +46,26 @@ Q_B_x_1 = sum((srs[i] * Q_B[i] for i in range(n)), start=ec.Point(None,None)) #9
 P_x_1 = sum((srs[N-1-(n-2)+i] * B_0[i] for i in range(n-1)), start=ec.Point(None,None)) #10
 print(bls12_381.pairing(A_x_1,T_x_2) == bls12_381.pairing(Q_A_x_1,Z_V_x_2) * bls12_381.pairing(m_x_1 - A_x_1 * beta, srs2[0])) #11
 print(bls12_381.pairing(B_0_x_1,srs2[N-1-(n-2)]) == bls12_381.pairing(P_x_1,srs2[0])) #12
+# Round 3
+gamma = random.randint(0,p-1) #1
+eta = random.randint(0,p-1) #1
+B_0_gamma = poly.eval(B_0,gamma,p) #2
+f_gamma = poly.eval(f,gamma,p) #2
+A_0 = util.mult_inv(N,p) * sum(y for _,y in A_i) #3
+b_0 = N * A_0 * util.mult_inv(n,p) % p #4
+Z_H_gamma = pow(gamma,n,p)-1 #5
+b_gamma = (B_0_gamma * gamma + b_0) %p #5
+Q_b_gamma = (b_gamma * (f_gamma + beta) - 1) * util.mult_inv(Z_H_gamma,p) %p #5
+v = (B_0_gamma + eta * f_gamma + pow(eta,2,p) * Q_b_gamma) %p #6a
+num = [B_0[i] + eta * f[i] + pow(eta,2,p) * Q_B[i] for i in range(n)] #6b
+num[0] -= v #6b
+num=[y%p for y in num] #6b
+h = poly.synth_div(num, gamma, p)[0] #6b
+pi_gamma = sum((srs[i] * h[i] for i in range(n-1)), start=ec.Point(None,None)) #6b
+c = B_0_x_1 + f_x_1 * eta + Q_B_x_1 * pow(eta,2,p) #6c
+print(bls12_381.pairing(c - bls12_381.G1*v + pi_gamma * gamma, srs2[0]) == bls12_381.pairing(pi_gamma, srs2[1])) #6c
+A_0_x = sum((L_i_0_x_1[i] * y for i,y in A_i), start=ec.Point(None,None)) #7a
+print(bls12_381.pairing(A_x_1 - bls12_381.G1*A_0, srs2[0]) == bls12_381.pairing(A_0_x, srs2[1])) #7b
+
+
 
