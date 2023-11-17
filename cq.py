@@ -29,7 +29,11 @@ f_x_1 = sum((srs[i] * f[i] for i in range(n)), start=ec.Point(None,None)) #commi
 
 # IsInTable(f_x_1, table, srs; f):
 # Round 1
-m_i = [(i,1) for i in range(n)] #1
+table_dict={table[i]:i for i in range(N)}
+m_i = dict()
+for y in f_i:
+   m_i[table_dict[y]]=m_i.get(table_dict[y],0)+1
+m_i=m_i.items()
 m_x_1 = sum((L_i_x_1[i] * y for i,y in m_i), start=ec.Point(None,None)) #2
 # Round 2
 beta = random.randint(0,p-1) #1
