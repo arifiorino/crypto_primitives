@@ -1,4 +1,4 @@
-import random
+import random, ec
 
 def mult_inv(x,p):
   t,newt=0,1
@@ -32,7 +32,7 @@ def dft(y, alpha, prime):
       X= dft2(x, N//2, s*2) + dft2(x[s:], N//2, s*2)
       for k in range(N//2):
         p=X[k]
-        q=pow(alpha,s*k,prime) * X[k+N//2]
+        q=X[k+N//2] * pow(alpha,s*k,prime)
         X[k]=(p+q)%prime
         X[k+N//2]=(p-q)%prime
     return X
@@ -43,16 +43,16 @@ def dft(y, alpha, prime):
 def inv_dft(y, alpha, prime):
   def inv_dft2(x,N,s):
     if N==1:
-      return [N*x[0]]
+      return [x[0]*N]
     else:
       X= inv_dft2(x, N//2, s*2) + inv_dft2(x[s:], N//2, s*2)
       for k in range(N//2):
         p=X[k]
-        q=mult_inv(pow(alpha,s*k,prime),prime) * X[k+N//2]
+        q=X[k+N//2] * mult_inv(pow(alpha,s*k,prime),prime)
         X[k]=(p+q)%prime
         X[k+N//2]=(p-q)%prime
     return X
-  return [mult_inv(len(y),prime) * c % prime for c in inv_dft2(y,len(y),1)]
+  return [c * mult_inv(len(y),prime) % prime for c in inv_dft2(y,len(y),1)]
 
 matmul=lambda A,x: [sum([x1*x2 for x1,x2 in zip(A[i],x)]) for i in range(len(A))]
 
@@ -76,7 +76,10 @@ def test_circulant_mult():
 def toeplitz_mult(a,x,alpha,p):
   n=(len(a)+1)//2
   c=a[n-1:]+[0]+a[:n-1]
-  r=circulant_mult(c,x+[0]*n,alpha,p)
+  if isinstance(x[0],int):
+    r=circulant_mult(c,x+[0]*n,alpha,p)
+  else:
+    r=circulant_mult(c,x+[ec.Point(None,None)]*n,alpha,p)
   return r[:n]
 
 def test_toeplitz_mult():

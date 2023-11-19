@@ -40,6 +40,8 @@ class Point():
     return '(%s,%s)'%(str(self.x),str(self.y))
   def __eq__(self,b):
     return (self.x,self.y)==(b.x,b.y)
+  def __mod__(self,p):
+    return self
   def untwist(self):
     assert isinstance(self.x,fields.Fq2)
     root=fields.Fq6(fields.Fq2.fromInt(0), fields.Fq2.fromInt(1), fields.Fq2.fromInt(0))
