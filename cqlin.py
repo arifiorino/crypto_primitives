@@ -1,49 +1,58 @@
-import kzg, bls12_381, fields, poly, util, random
+import kzg, bls12_381, fields, poly, util, random, ec, time
 
-n=2
-p=257
-alpha=4
+n=16
+p=bls12_381.groupOrder
+alpha4=util.nth_root(n*4,p)
+alpha2=pow(alpha4,2,p)
+alpha=pow(alpha2,2,p)
+x=random.randint(0,p-1)
 
-M=[[1,2],[3,4]]
-a=[1,2]
-b=[5,11]
+def batched_kzg():
+  srs=[bls12_381.G1 * pow(x,i,p) for i in range(n)]
+  Pi=list(range(n))
+  P=util.inv_dft(Pi,alpha,p)
 
-L=[[0]*n for _ in range(n)]
-Ln=[[0]*n*n for _ in range(n)]
-for j in range(n):
-  L[j][j]=1
-  L[j]=util.inv_dft(L[j],alpha,p)
+  h = util.toeplitz_mult(P[1:]+[0]*n,srs[::-1],alpha2,p)
+  print(*util.dft(h,alpha,p))
+
+  Kis = [poly.synth_div([P[0]-Pi[i]]+P[1:],pow(alpha,i,p),p)[0] for i in range(n)]
+  print(*[bls12_381.G1 * poly.eval(Ki,x,p) for Ki in Kis])
+
+def batched_kzg_An():
+  A=list(range(n))
+  srs=[bls12_381.G1 * pow(x,n*i,p) * poly.eval(A,x,p) for i in range(n)]
+  P=list(range(n))
+
+  h = util.toeplitz_mult(P[1:]+[0]*n,srs[::-1],alpha2,p)
+  print(*util.dft(h,alpha,p))
+
+  P_n = []
   for i in range(n):
-    Ln[j][i*n]=L[j][i]
+    P_n+=[P[i]]+[0]*(n-1)
+  Kis = [poly.div([P_n[0]-poly.eval(P,pow(alpha,i,p),p)]+P_n[1:],[p-pow(alpha,i,p)]+[0]*(n-1)+[1],p)[0] for i in range(n)]
+  print(*[bls12_381.G1 * poly.eval(Ki,x,p) * poly.eval(A,x,p) for Ki in Kis])
 
-print('L',L)
-print('Ln',Ln)
-R=[[0]*n for _ in range(n)]
-for i in range(n):
-  for j in range(n):
-    R[i]=[(x+M[i][j]*y)%p for x,y in zip(R[i],L[j])]
-M=[0]*n*n*n
-for i in range(n):
-  temp = poly.mult(Ln[i].copy(),R[i].copy(),p)
-  M=[(x+y)%p for x,y in zip(M,temp)]
-A=[0]*n*n
-for k in range(n):
-  for i in range(n):
-    A[k*n]=(A[k*n]+a[i]*L[i][k]) %p
-print('R',R)
-print('M',M)
-print('A',A)
-Y=poly.mult(A.copy(),M.copy(),p)
-print('Y',Y)
+def lemma_5_2():
+  k=4
+  t=time.time()
+  srs=[bls12_381.G1 * pow(x,i,p) for i in range(2*n)]
+  As = [list(range(i,n+i)) for i in range(k)]
 
-X=[0]*n*n*n
-for i in range(n):
-  temp=poly.mult(Ln[i].copy(),R[i].copy(),p)
-  temp=[a[i]*temp[j] for j in range(n*n*n)]
-  X=[(X[j]+temp[j])%p for j in range(n*n*n)]
-print('X',X)
-Z=[p-1]+[0]*(n*n-1)+[1]
-print('Z',Z)
-print('poly.div(Y,Z,p)',poly.div(Y,Z,p))
-print('poly.div(X,Z,p)',poly.div(X,Z,p))
+  temp = [util.toeplitz_mult([0]*n + As[j][::-1] + [0]*(2*n-1),srs,alpha4,p)[:n] for j in range(k)]
+  srs_star = [util.dft(l[::-1] + [ec.Point(None,None)]*n, alpha2, p) for l in temp]
+
+  Ps = [list(range(i,n+i)) for i in range(k)]
+  step_1 = [util.dft(Ps[i]+[0]*n, alpha2, p) for i in range(k)]
+  step_2 = [[a*b for a,b in zip(srs_star[i], step_1[i])] for i in range(k)]
+  step_3 = [sum([step_2[j][i] for j in range(k)], start=ec.Point(None,None)) for i in range(2*n)]
+  h_D_coeff = util.inv_dft(step_3, alpha2, p)
+  h_D_a = util.dft(h_D_coeff[n:], alpha, p)
+
+  pi_a = [sum(poly.eval(As[j],x,p) * (poly.eval(Ps[j],x,p) - poly.eval(Ps[j],pow(alpha,i,p),p)) * util.mult_inv(x-pow(alpha,i,p),p)
+              for j in range(k)) %p for i in range(n)]
+  pi_a = [bls12_381.G1 * pi_a[i] for i in range(n)]
+  print(*h_D_a)
+  print(*pi_a)
+
+
 
