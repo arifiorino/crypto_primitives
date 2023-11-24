@@ -1,6 +1,7 @@
 import random, ec
 
 def mult_inv(x,p):
+  x=x%p
   t,newt=0,1
   r,newr=p,x
   while newr!=0:
