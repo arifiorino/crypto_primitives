@@ -7,4 +7,6 @@ Includes:
 - Generating Bitcoin public keys
 - The BLS12-381 pairing
 - KZG commitments
-- Basic vector arithmetic proofs
+- Pointwise addition and multiplicaion vector arithmetic proofs
+- cq lookup tables
+- cqlin matrix multiplication
