@@ -1,84 +1,59 @@
 import kzg, bls12_381, fields, poly, util, random, ec, time
 
-n=16
+n=8
 p=bls12_381.groupOrder
-alpha4=util.nth_root(n*4,p)
-alpha2=pow(alpha4,2,p)
+alpha2=util.nth_root(n*2,p)
 alpha=pow(alpha2,2,p)
 x=random.randint(0,p-1)
 
-def batched_kzg():
-  srs=[bls12_381.G1 * pow(x,i,p) for i in range(n)]
-  Pi=list(range(n))
-  P=util.inv_dft(Pi,alpha,p)
+#x^0,x^1,x^2,... -> L_0(x),L_1(x),L_2(x),...
+def convert_to_L(xs):
+  r = util.dft(xs,alpha,p)
+  r = [r[0]] + r[1:][::-1]
+  r = [r[i] * util.mult_inv(n,p) for i in range(n)]
+  return r
 
-  h = util.toeplitz_mult(P[1:]+[0]*n,srs[::-1],alpha2,p)
-  print(*util.dft(h,alpha,p))
+#t=time.time()
+#print(time.time()-t);t=time.time()
 
-  Kis = [poly.synth_div([P[0]-Pi[i]]+P[1:],pow(alpha,i,p),p)[0] for i in range(n)]
-  print(*[bls12_381.G1 * poly.eval(Ki,x,p) for Ki in Kis])
+srs=[bls12_381.G1 * pow(x,i,p) for i in range(n**2 + n)]
 
-def batched_kzg_An():
-  A=list(range(n))
-  srs=[bls12_381.G1 * pow(x,n*i,p) * poly.eval(A,x,p) for i in range(n)]
-  P=list(range(n))
+Ls = [util.inv_dft([0]*i+[1]+[0]*(n-1-i),alpha,p) for i in range(n)]
+M = [list(range(i,i+n)) for i in range(n)]
 
-  h = util.toeplitz_mult(P[1:]+[0]*n,srs[::-1],alpha2,p)
-  print(*util.dft(h,alpha,p))
+temp = [convert_to_L([srs[i + n*j] for j in range(n)]) for i in range(n)] #L_j(x^n)x^i
+U = [convert_to_L([temp[i][j] for i in range(n)]) for j in range(n)] #L_i(x^n)L_j(x)
+temp = convert_to_L(srs[n**2-n : n**2])
+V = [temp[i] * util.mult_inv(n,p) for i in range(n)]
 
-  P_n = []
-  for i in range(n):
-    P_n+=[P[i]]+[0]*(n-1)
-  Kis = [poly.div([P_n[0]-poly.eval(P,pow(alpha,i,p),p)]+P_n[1:],[p-pow(alpha,i,p)]+[0]*(n-1)+[1],p)[0] for i in range(n)]
-  print(*[bls12_381.G1 * poly.eval(Ki,x,p) * poly.eval(A,x,p) for Ki in Kis])
+srs_star = [convert_to_L(srs[n*i:n*i+n]) for i in range(n)]
+srs_star = [[srs_star[j][i] for j in range(n)] for i in range(n)]
+srs_star = [util.dft(srs_star[i][::-1] + [ec.Point(None,None)]*n, alpha2, p) for i in range(n)]
 
-def lemma_5_2():
-  t=time.time()
-  srs=[bls12_381.G1 * pow(x,i,p) for i in range(n*2)]
-  Ls = [util.inv_dft([0]*i+[1]+[0]*(n-1-i),alpha,p) for i in range(n)]
-  Ps = [list(range(i,n+i)) for i in range(n)]
+S = [sum(((U[i][j] * util.mult_inv(pow(alpha,i,p),p) - V[j]) * M[i][j] for j in range(n)), start=ec.Point(None,None)) for i in range(n)]
+R = [sum((U[i][j] * M[i][j] for j in range(n)), start=ec.Point(None,None)) for i in range(n)]
+C = [[sum([M[i][j] * Ls[i][coeff] for i in range(n)]) %p for coeff in range(n)] for j in range(n)]
 
-  srs_star = [util.dft(srs[i:i+n],alpha,p) for i in range(n)]
-  srs_star = [[srs_star[i][0]] + srs_star[i][1:][::-1] for i in range(n)]
-  srs_star = [[srs_star[i][j] * util.mult_inv(n,p) for i in range(n)] for j in range(n)]
-  srs_star = [util.dft(srs_star[i][::-1] + [ec.Point(None,None)]*n, alpha2, p) for i in range(n)]
+temp = [util.dft(C[i]+[0]*n, alpha2, p) for i in range(n)] #1
+temp = [[srs_star[i][j]*temp[i][j] for j in range(2*n)] for i in range(n)] #2
+temp = [sum([temp[j][i] for j in range(n)], start=ec.Point(None,None)) for i in range(2*n)] #3
+temp = util.inv_dft(temp, alpha2, p) #coefficients
+temp = util.dft(temp[n:], alpha, p) #evaluate
+Q = [temp[i]*(pow(alpha,i,p)*util.mult_inv(n,p)%p) for i in range(n)] #scale by c_i
 
-  step_1 = [util.dft(Ps[i]+[0]*n, alpha2, p) for i in range(n)]
-  step_2 = [[a*b for a,b in zip(srs_star[i], step_1[i])] for i in range(n)]
-  step_3 = [sum([step_2[j][i] for j in range(n)], start=ec.Point(None,None)) for i in range(2*n)]
-  h_D_coeff = util.inv_dft(step_3, alpha2, p)
-  pi_a = util.dft(h_D_coeff[n:], alpha, p)
+L_x = [poly.eval(Ls[i],x,p) for i in range(n)]
+L_x_n = [poly.eval(Ls[i],pow(x,n,p),p) for i in range(n)]
+R_x = [sum([M[i][j] * L_x[j] %p for j in range(n)]) %p for i in range(n)]
+M_x = bls12_381.G1 * (sum(L_x_n[i] * R_x[i] for i in range(n))%p)
+Z_x = pow(x,n*n,p) - 1
+#Test Q,R
+for i in range(n):
+  print(M_x * L_x_n[i] == Q[i] * Z_x + R[i])
 
-  test = [sum(poly.eval(Ls[j],x,p) * (poly.eval(Ps[j],x,p) - poly.eval(Ps[j],pow(alpha,i,p),p)) * util.mult_inv((x-pow(alpha,i,p))%p,p)
-              for j in range(n)) %p for i in range(n)]
-  test = [bls12_381.G1 * test[i] for i in range(n)]
-  for a,b in zip(pi_a, test):
-    print(a==b)
-
-def lemma_5_2_moreover():
-  srs=[bls12_381.G1 * pow(x,i,p) for i in range(n**2)]
-  Ls = [util.inv_dft([0]*i+[1]+[0]*(n-1-i),alpha,p) for i in range(n)]
-  Ps = [list(range(i,n+i)) for i in range(n)]
-
-  srs_star = [util.dft(srs[i*n:i*n+n],alpha,p) for i in range(n)]
-  srs_star = [[srs_star[i][0]] + srs_star[i][1:][::-1] for i in range(n)]
-  srs_star = [[srs_star[i][j] * util.mult_inv(n,p) for i in range(n)] for j in range(n)]
-  srs_star = [util.dft(srs_star[i][::-1] + [ec.Point(None,None)]*n, alpha2, p) for i in range(n)]
-
-  step_1 = [util.dft(Ps[i]+[0]*n, alpha2, p) for i in range(n)]
-  step_2 = [[a*b for a,b in zip(srs_star[i], step_1[i])] for i in range(n)]
-  step_3 = [sum([step_2[j][i] for j in range(n)], start=ec.Point(None,None)) for i in range(2*n)]
-  h_D_coeff = util.inv_dft(step_3, alpha2, p)
-  pi_a_prime = util.dft(h_D_coeff[n:], alpha, p)
-
-  test = [sum(poly.eval(Ls[j],x,p) * (poly.eval(Ps[j],pow(x,n,p),p) - poly.eval(Ps[j],pow(alpha,i,p),p)) * util.mult_inv((pow(x,n,p)-pow(alpha,i,p))%p,p)
-              for j in range(n)) %p for i in range(n)]
-  test = [bls12_381.G1 * test[i] for i in range(n)]
-  for a,b in zip(pi_a_prime, test):
-    print(a==b)
+for i in range(n):
+  print(bls12_381.G1 * ((L_x_n[i] - util.mult_inv(n,p)) * R_x[i] %p) == S[i] * pow(x,n,p))
 
 
-#x^0,x^1,x^2,... ->DFT->  ->reverse/multiply->  L_0(x),L_1(x),L_2(x),...
-#x^i,x^{i+1},x^{i+2},... ->DFT->  ->reverse/multiply->  L_0(x)x^i,L_1(x)x^i,L_2(x)x^i,...
-#x^{ni},x^{ni+1},x^{ni+2},... ->DFT->  ->reverse/multiply->  L_0(x)x^{ni},L_1(x)x^{ni},L_2(x)x^{ni},...
+
+
 
