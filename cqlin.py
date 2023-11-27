@@ -26,6 +26,8 @@ g = util.inv_dft(b, alpha, p)
 f_com = sum((srs[i] * f[i]  for i in range(n)), start=ec.Point(None,None))
 g_com = sum((srs[i] * g[i]  for i in range(n)), start=ec.Point(None,None))
 
+L_i_x = convert_to_L(srs[:n])
+L_i_x_n = convert_to_L([srs[n*i] for i in range(n)])
 temp = [convert_to_L([srs[i + n*j] for j in range(n)]) for i in range(n)] #L_j(x^n)x^i
 U = [convert_to_L([temp[i][j] for i in range(n)]) for j in range(n)] #L_i(x^n)L_j(x)
 temp = convert_to_L(srs[n**2-n : n**2])
@@ -67,13 +69,11 @@ print(bls12_381.pairing(g_com, srs2[n**2-n]) == bls12_381.pairing(p_x, srs2[0]))
 gamma = random.randint(0,p-1)
 gamma_n = pow(gamma,n,p)
 z = poly.eval(f,gamma_n,p)
-h = poly.synth_div([(f[0]-z)%p]+f[1:],gamma_n,p)[0]
-pi = sum((srs[i] * h[i]  for i in range(n-1)), start=ec.Point(None,None))
+h_i = [((a[i] - z) * util.mult_inv(pow(alpha,i,p) - gamma_n, p)) %p for i in range(n)]
+pi = sum((L_i_x[i] * h_i[i]  for i in range(n)), start=ec.Point(None,None))
 print(bls12_381.pairing(f_com - srs[0]*z + pi*gamma_n,srs2[0]) == bls12_381.pairing(pi,srs2[1]))
 
-temp = sum([[(f[0]-z)%p]] + [[0]*(n-1)+[f[i]] for i in range(1,n)], start=[])
-h_1 = poly.div(temp, [p-gamma_n]+[0]*(n-1)+[1], p)[0]
-pi_1 = sum((srs[i] * h_1[i]  for i in range(n**2-2*n + 1)), start=ec.Point(None,None))
+pi_1 = sum((L_i_x_n[i] * h_i[i]  for i in range(n)), start=ec.Point(None,None))
 print(bls12_381.pairing(A_com - srs[0]*z + pi_1*gamma_n,srs2[0]) == bls12_381.pairing(pi_1,srs2[n]))
 print("Proof time:",time.time()-t);t=time.time()
 
